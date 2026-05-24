@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 
 from services.course_runner import run_course_batch
-from utils.course_store import get_course, set_course, update_course
+from utils.course_store import get_course, update_course
 from utils.helpers import get_session, set_session
 from utils.job_health import course_batch_alive, start_course_batch_task
 from utils.stream_bus import clear_session

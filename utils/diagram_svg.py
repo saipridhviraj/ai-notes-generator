@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import html
-import math
 from collections import deque
 
 from models.diagram_spec import DiagramSpec
@@ -97,10 +96,8 @@ def render_diagram_svg(spec: DiagramSpec | dict) -> str:
         '<path d="M0,0 L8,4 L0,8 Z" fill="#94a3b8"/>',
         "</marker>",
         "</defs>",
-        f'<rect width="100%" height="100%" fill="#0f172a"/>',
+        '<rect width="100%" height="100%" fill="#0f172a"/>',
     ]
-
-    id_to_node = {n.id: n for n in spec.nodes}
 
     for edge in spec.edges:
         sp = positions.get(edge.source)

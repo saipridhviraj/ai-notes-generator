@@ -4,10 +4,7 @@ import uuid
 
 from services.prompt_config import get_min_mermaid_diagrams
 from utils.session_store import (
-    create_session,
     get_session,
-    session_store,
-    set_session,
 )
 
 TUTOR_TIMEOUT_SECONDS = 300  # 5 minutes

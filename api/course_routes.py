@@ -19,7 +19,7 @@ from api.course_models import (
 )
 from api.rate_limit import limiter
 from services.course_planner import build_course_plan
-from services.course_runner import course_output_root, run_course_batch
+from services.course_runner import course_output_root
 from services.course_control import cancel_course_generation, launch_course_batch, resume_course_batch, retry_course_day
 from utils.course_store import create_course, delete_all_courses, delete_course, get_course, list_courses, update_course
 from utils.helpers import generate_session_id

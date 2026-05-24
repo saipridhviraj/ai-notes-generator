@@ -1,5 +1,5 @@
 """Unit tests for graph nodes — planner, research, final_response."""
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

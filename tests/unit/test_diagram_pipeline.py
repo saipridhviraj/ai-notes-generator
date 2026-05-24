@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
 
 from utils.diagram_pipeline import render_diagrams_in_notes
 

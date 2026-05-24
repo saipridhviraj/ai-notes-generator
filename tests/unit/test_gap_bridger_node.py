@@ -1,5 +1,5 @@
 """Tests for gap_bridger_node — BUG-RT-007 JSON fallback."""
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from graph.nodes.gap_bridger_node import gap_bridger_node
 from graph.state import EvaluationResult
 from prompts.gap_bridger_prompts import split_gap_content

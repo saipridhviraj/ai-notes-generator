@@ -1,6 +1,5 @@
 """Tests for partial pipeline resume."""
 
-import pytest
 
 from graph.state import KeywordPlan
 from utils.graph_resume import (

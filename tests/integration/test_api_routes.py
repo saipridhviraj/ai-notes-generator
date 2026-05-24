@@ -276,7 +276,7 @@ class TestTutorRejectionRoute:
         assert response.status_code == 400
 
     def test_tutor_rejection_stored_correctly(self, client):
-        from utils.helpers import create_session, get_session, session_store
+        from utils.helpers import create_session, get_session
         create_session("test-reject-002", {
             "status": "awaiting_tutor",
             "errors": [],

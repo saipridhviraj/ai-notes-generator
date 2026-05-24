@@ -30,7 +30,7 @@ class TestSessionsListAuth:
 
 class TestSessionRestart:
     def test_restart_interrupted_session(self, client):
-        from utils.helpers import create_session, get_session, session_store
+        from utils.helpers import create_session
 
         create_session(
             "restart-s1",

@@ -51,7 +51,6 @@ class TestParseMarkdownSections:
 
 class TestMergeAnnotationsBySection:
     def test_inserts_by_section_key(self):
-        sections = parse_markdown_sections(SAMPLE)
         annotations = {
             "## Decorators": "> **👨‍🏫 TEACHING NOTE:** Start with wrappers.",
         }

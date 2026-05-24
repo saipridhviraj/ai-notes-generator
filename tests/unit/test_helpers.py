@@ -1,14 +1,11 @@
 """Tests for utils/helpers.py — session store, Mermaid validation, graph config."""
-import pytest
 import time
-from unittest.mock import patch
 from utils.helpers import (
     create_session,
     get_session,
     set_session,
     generate_session_id,
     get_graph_config,
-    slugify,
     validate_mermaid_block,
     validate_all_mermaid_in_notes,
     extract_mermaid_blocks,

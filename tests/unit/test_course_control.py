@@ -1,6 +1,6 @@
 """Tests for course control helpers."""
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 from utils import course_store
 from utils import job_health

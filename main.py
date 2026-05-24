@@ -1,8 +1,11 @@
 import os
+import pathlib
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -78,18 +81,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from api.routes import router
-from api.course_routes import router as course_router
-from api.note_events_routes import router as note_events_router
+from api.routes import router  # noqa: E402
+from api.course_routes import router as course_router  # noqa: E402
+from api.note_events_routes import router as note_events_router  # noqa: E402
 
 app.include_router(router)
 app.include_router(course_router)
 app.include_router(note_events_router)
-
-# ── Serve compiled React frontend (production) ─────────────────────────────────
-import pathlib
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 _FRONTEND_DIST = pathlib.Path(__file__).parent / "frontend" / "dist"
 if _FRONTEND_DIST.is_dir():

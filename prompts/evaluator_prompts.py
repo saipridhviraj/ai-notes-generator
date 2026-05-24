@@ -293,7 +293,7 @@ def get_evaluator_user_prompt(
         f"Keywords that MUST appear in notes: {keywords_str}\n\n"
         f"{mode_note}\n"
         f"Student H2 sections:\n" + "\n".join(f"  {h}" for h in student_headings) + "\n\n"
-        f"Tutor H2 sections:\n" + "\n".join(f"  {h}" for h in tutor_headings[:20]) + "\n\n"
+        "Tutor H2 sections:\n" + "\n".join(f"  {h}" for h in tutor_headings[:20]) + "\n\n"
         f"Teaching annotation samples ({len(teaching_notes)} total):\n"
         + "\n".join(f"  {t[:80]}" for t in teaching_notes[:5]) + "\n\n"
         f"─── MERMAID DIAGRAMS TO EVALUATE ───\n"

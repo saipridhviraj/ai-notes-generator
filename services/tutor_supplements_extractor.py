@@ -48,7 +48,7 @@ def _extract_blockquote_blocks(text: str) -> List[tuple[str, int]]:
     for i, line in enumerate(lines):
         if line.startswith(">"):
             if not in_block:
-                start = sum(len(l) + 1 for l in lines[:i])
+                start = sum(len(ln) + 1 for ln in lines[:i])
                 in_block = True
             current.append(line.lstrip(">").strip())
         else:

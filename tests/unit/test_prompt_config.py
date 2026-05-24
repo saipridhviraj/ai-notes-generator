@@ -1,5 +1,4 @@
 """Tests for dev vs production prompt profile routing."""
-import pytest
 
 
 class TestPromptConfig:

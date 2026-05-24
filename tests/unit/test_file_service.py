@@ -1,6 +1,4 @@
 """P0 tests for file_service — BUG-1 regression: output must be in generated_notes/."""
-import pytest
-from pathlib import Path
 from services.file_service import save_markdown, NOTES_DIR, slugify
 
 

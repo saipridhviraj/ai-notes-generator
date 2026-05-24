@@ -150,7 +150,7 @@ def ensure_min_placeholders(markdown: str, min_count: int) -> str:
             needed -= 1
 
     while needed > 0:
-        notes = (notes.rstrip() + f"\n\n<!-- diagram: ## Overview -->\n").strip() + "\n"
+        notes = (notes.rstrip() + "\n\n<!-- diagram: ## Overview -->\n").strip() + "\n"
         needed -= 1
 
     return notes

@@ -1,6 +1,6 @@
 """Tests for course checkpoint batch logic."""
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 from graph.course_models import CoursePlan, DayPlan
 from services.course_runner import (

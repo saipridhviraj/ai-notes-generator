@@ -1,5 +1,5 @@
 """Tests for TavilyClient — search and keyword aggregation."""
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

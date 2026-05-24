@@ -1,8 +1,7 @@
 """Tests for evaluator_node — BUG-4 regression: diagram validation must be called."""
 import importlib
 import pytest
-from unittest.mock import patch, MagicMock
-from graph.state import EvaluationResult
+from unittest.mock import patch
 
 _EVALUATOR_MOD = "graph.nodes.evaluator_node"
 

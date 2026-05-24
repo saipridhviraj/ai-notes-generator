@@ -1,5 +1,4 @@
 """Tests for graph routing functions — BUG-2 regression: rejected route must exist."""
-import pytest
 from unittest.mock import MagicMock
 
 

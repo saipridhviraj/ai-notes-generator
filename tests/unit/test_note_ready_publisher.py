@@ -1,6 +1,5 @@
 """Tests for note.ready publisher and webhook delivery."""
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

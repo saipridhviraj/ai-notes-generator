@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

@@ -1,6 +1,4 @@
 """Tests for note.ready outbox."""
-import json
-import os
 import time
 
 import pytest

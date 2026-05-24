@@ -71,7 +71,6 @@ _DOMAIN_EXAMPLES = {
     "llm_ops":         "Weights & Biases (experiment tracking), LangSmith (LLM tracing), Arize AI (monitoring), MLflow",
     "langchain":       "Chatbots with memory, document Q&A pipelines, AI agents, RAG systems at startups and enterprises",
     "system_design":   "Twitter feed (fan-out), Uber surge pricing, Netflix CDN, WhatsApp messaging at scale, Google search index",
-    "genai_system_design": "Perplexity AI, Notion AI, Cursor, GitHub Copilot architecture",
     "data_structures": "Google Maps (graphs), database indexes (B-trees), browser history (stacks), autocomplete (tries)",
     "nlp":             "Google Translate (seq2seq), Gmail Smart Reply (NLG), Grammarly (text classification), Siri/Alexa (NLU)",
 }
