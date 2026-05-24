@@ -1,4 +1,16 @@
-"""Unified LLM client — Groq cloud or local Ollama, with optional Groq fallback."""
+"""Unified LLM client — Groq cloud or local Ollama, with optional Groq fallback.
+
+Model tiers (Groq):
+  small     — fast/cheap  : planner, research, evaluator-light, mermaid repair
+  medium    — balanced    : gap bridger, diagram generation
+  large     — high quality: student notes, tutor notes
+  reasoning — chain-of-thought: evaluator full
+
+Each tier has a fallback chain; on rate-limit the next model is tried
+automatically. Set GROQ_API_KEY_2 / GROQ_API_KEY_3 for multi-key
+round-robin to further stretch rate limits.
+"""
+import itertools
 import os
 import re
 import sys
@@ -9,11 +21,40 @@ from groq import Groq
 
 from services.llm_config import get_provider_name, use_ollama
 
-GROQ_MODELS = {
-    "small":     "llama-3.1-8b-instant",
-    "large":     "llama-3.3-70b-versatile",
-    "reasoning": "llama-3.3-70b-versatile",
+# ── Model chains — primary first, fallbacks after ─────────────────────────────
+# Override any tier with env vars, e.g. GROQ_MODEL_LARGE=llama-3.3-70b-versatile
+GROQ_MODEL_CHAINS: dict[str, list[str]] = {
+    "small": [
+        os.getenv("GROQ_MODEL_SMALL", "llama-3.1-8b-instant"),
+        "gemma2-9b-it",
+    ],
+    "medium": [
+        os.getenv("GROQ_MODEL_MEDIUM", "gemma2-9b-it"),
+        "llama-3.1-8b-instant",
+    ],
+    "large": [
+        os.getenv("GROQ_MODEL_LARGE", "llama-3.3-70b-versatile"),
+        "mixtral-8x7b-32768",       # long-context fallback
+        "gemma2-9b-it",             # last resort
+    ],
+    "reasoning": [
+        os.getenv("GROQ_MODEL_REASONING", "deepseek-r1-distill-llama-70b"),
+        "llama-3.3-70b-versatile",  # fallback if reasoning quota hit
+    ],
 }
+
+# Backward-compatible single-model map (primary of each chain)
+GROQ_MODELS = {tier: chain[0] for tier, chain in GROQ_MODEL_CHAINS.items()}
+
+
+def _get_api_keys() -> list[str]:
+    """Collect all configured Groq API keys for round-robin use."""
+    keys = []
+    for suffix in ("", "_2", "_3"):
+        k = os.getenv(f"GROQ_API_KEY{suffix}", "").strip()
+        if k:
+            keys.append(k)
+    return keys or [""]   # empty string → GroqClient will raise a clear error
 
 DEFAULT_OLLAMA_MODEL = "qwen3.5:9b-q4_K_M"
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
@@ -73,13 +114,86 @@ def check_ollama_reachable() -> bool | None:
 
 
 class GroqClient:
+    """Groq client with per-tier model fallback chains and multi-key round-robin."""
+
+    # Shared key cycle across all instances so concurrent calls spread load
+    _key_cycle: "itertools.cycle[str] | None" = None
+
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "GROQ_API_KEY is not set. Add it to your .env file."
-            )
-        self.client = Groq(api_key=api_key)
+        keys = _get_api_keys()
+        if not any(keys):
+            raise ValueError("GROQ_API_KEY is not set. Add it to your .env file.")
+        if GroqClient._key_cycle is None:
+            GroqClient._key_cycle = itertools.cycle(keys)
+        # Primary client uses first key; _next_client() rotates
+        self._clients = {k: Groq(api_key=k) for k in keys}
+        self._keys = keys
+
+    def _next_client(self) -> Groq:
+        key = next(GroqClient._key_cycle)  # type: ignore[arg-type]
+        return self._clients[key]
+
+    # ── Core call with model-chain + multi-key fallback ────────────────────────
+
+    def _call_with_fallback(
+        self,
+        messages: list[dict],
+        size: str,
+        temperature: float,
+        max_tokens: int,
+        stream: bool,
+        llm_options: dict | None,
+    ):
+        """Try each model in the chain for `size`, rotating keys on rate-limit."""
+        chain = GROQ_MODEL_CHAINS.get(size, GROQ_MODEL_CHAINS["large"])
+        last_exc: Exception | None = None
+
+        for model in chain:
+            retries = len(self._keys) * 2  # try each key twice per model
+            for attempt in range(1, retries + 1):
+                client = self._next_client()
+                try:
+                    create_kwargs: dict = {
+                        "model": model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    }
+                    if stream:
+                        create_kwargs["stream"] = True
+                    if llm_options and "top_p" in llm_options:
+                        create_kwargs["top_p"] = llm_options["top_p"]
+
+                    result = client.chat.completions.create(**create_kwargs)
+                    print(f"[GroqClient] ✓ {model} (size={size})", file=sys.stderr)
+                    return model, result
+
+                except Exception as e:
+                    error_str = str(e)
+                    is_rate_limit = "rate_limit_exceeded" in error_str or "429" in error_str
+                    if is_rate_limit:
+                        wait = 5.0
+                        match = re.search(r"try again in ([\d.]+)s", error_str)
+                        if match:
+                            wait = float(match.group(1)) + 1.0
+                        print(
+                            f"[GroqClient] Rate limit on {model} key#{attempt} — "
+                            f"{'waiting' if attempt >= retries else 'rotating key'} {wait:.0f}s",
+                            file=sys.stderr,
+                        )
+                        if attempt >= retries:
+                            last_exc = e
+                            break   # move to next model in chain
+                        time.sleep(min(wait, 10.0))
+                        continue
+                    # Non-rate-limit error on this model — try next model
+                    print(f"[GroqClient] {model} error: {e} — trying next model", file=sys.stderr)
+                    last_exc = e
+                    break
+
+        raise RuntimeError(
+            f"All models in chain for size='{size}' failed. Last error: {last_exc}"
+        )
 
     def complete(
         self,
@@ -90,7 +204,7 @@ class GroqClient:
         max_tokens: int = 8192,
         session_id: str | None = None,
         stream_node: str | None = None,
-        think: bool | None = None,
+        think: bool | None = None,  # noqa: ARG002 (Groq doesn't use think)
         llm_options: dict | None = None,
     ) -> str:
         if session_id and stream_node and _streaming_enabled():
@@ -101,7 +215,6 @@ class GroqClient:
                     system=system,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    think=think,
                     llm_options=llm_options,
                 ),
                 session_id,
@@ -113,36 +226,10 @@ class GroqClient:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        max_attempts = 4
-        for attempt in range(1, max_attempts + 1):
-            try:
-                create_kwargs: dict = {
-                    "model": GROQ_MODELS[size],
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                }
-                if llm_options and "top_p" in llm_options:
-                    create_kwargs["top_p"] = llm_options["top_p"]
-                response = self.client.chat.completions.create(**create_kwargs)
-                return response.choices[0].message.content
-            except Exception as e:
-                error_str = str(e)
-                is_rate_limit = "rate_limit_exceeded" in error_str or "429" in error_str
-                if is_rate_limit and attempt < max_attempts:
-                    wait = 15.0
-                    match = re.search(r"try again in ([\d.]+)s", error_str)
-                    if match:
-                        wait = float(match.group(1)) + 1.0
-                    print(
-                        f"[GroqClient] Rate limit hit — waiting {wait:.0f}s "
-                        f"(attempt {attempt}/{max_attempts})",
-                        file=sys.stderr,
-                    )
-                    time.sleep(wait)
-                    continue
-                print(f"[GroqClient] Error calling {GROQ_MODELS[size]}: {e}", file=sys.stderr)
-                raise
+        _, response = self._call_with_fallback(
+            messages, size, temperature, max_tokens, stream=False, llm_options=llm_options
+        )
+        return response.choices[0].message.content
 
     def iter_complete(
         self,
@@ -151,7 +238,7 @@ class GroqClient:
         system: str = "",
         temperature: float = 0.7,
         max_tokens: int = 8192,
-        think: bool | None = None,
+        think: bool | None = None,  # noqa: ARG002
         llm_options: dict | None = None,
     ):
         messages = []
@@ -159,16 +246,9 @@ class GroqClient:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        create_kwargs: dict = {
-            "model": GROQ_MODELS[size],
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-        }
-        if llm_options and "top_p" in llm_options:
-            create_kwargs["top_p"] = llm_options["top_p"]
-        stream = self.client.chat.completions.create(**create_kwargs)
+        _, stream = self._call_with_fallback(
+            messages, size, temperature, max_tokens, stream=True, llm_options=llm_options
+        )
         for chunk in stream:
             token = chunk.choices[0].delta.content
             if token:
