@@ -1,15 +1,25 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
-  headers: {
-    "Content-Type": "application/json",
-    ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
-  },
+  headers: { "Content-Type": "application/json" },
 });
+
+// Fetch the API key from the backend once and inject it into all future requests.
+// This avoids baking the key into the Docker image at build time.
+(async () => {
+  try {
+    const res = await axios.get<{ api_key: string }>(`${API_BASE}/app-config`);
+    const key = res.data.api_key;
+    if (key) {
+      apiClient.defaults.headers.common["X-API-Key"] = key;
+    }
+  } catch {
+    // Running locally without APP_API_KEY set — auth is disabled, carry on.
+  }
+})();
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

@@ -75,6 +75,12 @@ def _build_initial_state(topic: str, session_id: str) -> dict:
     }
 
 
+@router.get("/app-config", include_in_schema=False)
+async def app_config():
+    """Return runtime config for the frontend (no auth required — same-origin only)."""
+    return {"api_key": os.getenv("APP_API_KEY", "")}
+
+
 @router.post("/generate", response_model=GenerateResponse, dependencies=[Depends(require_api_key)])
 @limiter.limit(os.getenv("RATE_LIMIT_GENERATE", "5/minute"))
 async def generate(request: Request, body: GenerateRequest):
