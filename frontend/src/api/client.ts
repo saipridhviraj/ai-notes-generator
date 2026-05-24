@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+export const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
+// Resolved at runtime from /app-config — use getApiKey() in raw fetch() calls.
+let _resolvedApiKey = import.meta.env.VITE_API_KEY ?? "";
+export const getApiKey = () => _resolvedApiKey;
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
@@ -14,6 +18,7 @@ export const apiClient = axios.create({
     const res = await axios.get<{ api_key: string }>(`${API_BASE}/app-config`);
     const key = res.data.api_key;
     if (key) {
+      _resolvedApiKey = key;
       apiClient.defaults.headers.common["X-API-Key"] = key;
     }
   } catch {

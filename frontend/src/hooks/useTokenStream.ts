@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { personaForNode } from "../constants/nodePersonas";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
+import { API_BASE, getApiKey } from "../api/client";
 
 export interface TokenStreamState {
   node: string | null;
@@ -35,9 +33,10 @@ export function useTokenStream(sessionId: string | null, enabled: boolean) {
 
     const connect = async () => {
       try {
+        const apiKey = getApiKey();
         const res = await fetch(`${API_BASE}/stream/${sessionId}`, {
           headers: {
-            ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
+            ...(apiKey ? { "X-API-Key": apiKey } : {}),
             Accept: "text/event-stream",
           },
           signal: controller.signal,

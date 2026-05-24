@@ -1,10 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getStatus, type StatusResponse } from "../api/client";
+import { getStatus, type StatusResponse, API_BASE, getApiKey } from "../api/client";
 import { invalidateSessionHistory } from "../utils/historyInvalidation";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 const SSE_TERMINAL = new Set([
   "completed",
@@ -62,10 +59,11 @@ export function usePolling(sessionId: string | null, streamGeneration = 0) {
       if (cancelled || terminalRef.current) return;
 
       try {
+        const apiKey = getApiKey();
         const res = await fetch(`${API_BASE}/status-stream/${sessionId}`, {
           headers: {
             Accept: "text/event-stream",
-            ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
+            ...(apiKey ? { "X-API-Key": apiKey } : {}),
           },
           signal: controller.signal,
         });
