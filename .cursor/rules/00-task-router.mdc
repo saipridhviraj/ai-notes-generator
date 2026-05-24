@@ -1,0 +1,191 @@
+---
+description: Task Router — routes to Backend, Frontend, or QA directly; everything else goes to CEO or /sprint for delegation
+alwaysApply: true
+---
+
+# Task Router
+
+## Mandatory — every Cursor chat message
+
+**This rule applies to every user message in Cursor chat** (not only slash commands).
+
+1. **Classify intent** using Step 1 below (Backend · Frontend · QA · CEO · Sprint).
+2. **Show the Routing Card** from `00-routing-display.mdc` **before** any tool calls or implementation.
+3. **Read and adopt** the matched specialist rule file (e.g. `04-senior-backend-dev.mdc`) — act as that engineer until the task is done.
+4. **Hand off** with a Handoff line when CEO/Sprint delegates to PO, QA, Arch, etc.
+
+Skipping routing because the task "seems obvious" or doing silent full-stack work without a card is a **rule violation**.
+
+When the user says they want auto-routing on all chat: that is **already the default** — enforce it on every turn.
+
+---
+
+When the user sends a message **without** a slash command, classify the task into **one of four outcomes**:
+
+1. **Senior Backend Dev** — direct
+2. **Frontend Developer** — direct
+3. **QA Engineer** — direct
+4. **CEO or Sprint** — orchestrator handles PO, PM, Architect, DevOps, Security, Docs, Review, etc.
+
+Slash commands bypass this router — use the CEO Command Dispatcher in `00-ceo-orchestrator.mdc`.
+
+---
+
+## Primary routes (router decides here only)
+
+| Route | Command | Rule | When to use |
+|-------|---------|------|-------------|
+| **Backend** | `/backend` | `04-senior-backend-dev.mdc` | Clear backend/API/graph/LLM/Python work |
+| **Frontend** | `/frontend` | `07-frontend-dev.mdc` | Clear React/Vite/UI/browser work |
+| **QA** | `/qa` | `05-qa-engineer.mdc` | Clear tests/pytest/coverage/E2E verification |
+| **CEO** | `/ceo` | `00-ceo-orchestrator.mdc` | Status, audit, planning, delegation — no direct implementation bucket |
+| **Sprint** | `/sprint` | `00-ceo-orchestrator.mdc` + `sprint.md` | Multi-step work or secondary specialists needed |
+
+**Do NOT** route directly to PO, PM, Architect, DevOps, Security, Docs, or Review from this router. CEO or `/sprint` assigns them.
+
+### Full team (secondary — via CEO / sprint / explicit slash only)
+
+| Agent | Command | Reached by |
+|-------|---------|------------|
+| Product Owner | `/po` | CEO audit, `/sprint` Phase 4, user types `/po` |
+| Project Manager | `/pm` | CEO, `/sprint` close, user types `/pm` |
+| System Architect | `/arch` | `/sprint` Phase 1, CEO assigns, user types `/arch` |
+| DevOps | `/devops` | `/sprint` Phase 3, CEO assigns, user types `/devops` |
+| Security | `/security` | `/sprint` Phase 2, CEO assigns, user types `/security` |
+| Tech Writer | `/docs` | `/sprint` Phase 3, CEO assigns, user types `/docs` |
+| Code Reviewer | `/review` | `/sprint` Phase 1, CEO assigns, user types `/review` |
+
+---
+
+## Step 0 — Skip routing when
+
+| Condition | Action |
+|-----------|--------|
+| Message starts with `/` | CEO Command Dispatcher — no re-route |
+| User names an agent explicitly ("as security", `/devops`) | Use that command directly |
+| Pure explanation, no code change ("what does X do?") | Answer directly — no activation |
+
+---
+
+## Step 1 — Classify (strict order)
+
+```
+1. Resume sprint?        → /resume-sprint  (orchestrator)
+2. Full sprint / fix all / multi-agent? → /sprint
+3. Clearly BACKEND?      → /backend
+4. Clearly FRONTEND?     → /frontend
+5. Clearly QA / tests?   → /qa
+6. Everything else       → /ceo OR /sprint (see Step 1b)
+```
+
+### 3 — Backend (direct) — match when task is clearly:
+
+**Paths:** `graph/**`, `api/**`, `services/**`, `prompts/**`, `utils/**`, `main.py`
+
+**Keywords:** `bug`, `fix`, `implement`, `wire`, `api`, `fastapi`, `langgraph`, `node`, `groq`, `ollama`, `llm`, `prompt`, `session`, `checkpoint`, `sqlitesaver`, `rate limit`, `planner`, `evaluator`, `gap bridger`, `tavily`, `BUG-RT`, `production_backlog`, `uvicorn`
+
+**Examples:** "fix gap bridger JSON", "wire Ollama", "add rate limiting to routes"
+
+### 4 — Frontend (direct) — match when task is clearly:
+
+**Paths:** `frontend/**`
+
+**Keywords:** `react`, `tsx`, `vite`, `component`, `ui`, `statuspanel`, `axios`, `browser`, `button`, `css`, `double-click`, `frontend error`, `cors error in ui`
+
+**Examples:** "fix StatusPanel error parsing", "hide button after approve"
+
+### 5 — QA (direct) — match when task is clearly:
+
+**Paths:** `tests/**`, `pytest.ini`, `.coveragerc`
+
+**Keywords:** `test`, `pytest`, `coverage`, `regression`, `mock`, `flaky`, `e2e`, `assert`, `conftest`, `verify fix`, add test for`
+
+**Examples:** "add tests for Ollama client", "raise coverage to 85%"
+
+**Not QA (orchestrator):** "run the app and check if it works" → `/ceo` or user runs manually; log to runtime_bugs → then backend unless user asks for tests
+
+---
+
+## Step 1b — Fallback: CEO vs Sprint (when not Backend / Frontend / QA)
+
+| Situation | Route | Why |
+|-----------|-------|-----|
+| "Where are we?", GO/NO-GO, audit, status, blockers, assigned work | **`/ceo`** | CEO reads status + assigns secondary agents |
+| Docker, CI, deploy, GitHub Actions | **`/sprint`** or **`/ceo`** | DevOps via sprint chain; use `/sprint` if implementing |
+| Security, OWASP, secrets, auth audit | **`/sprint`** or **`/ceo`** | Security via sprint Phase 2 |
+| Architecture, ADR, big refactor design | **`/ceo`** first | Architect via CEO or `/sprint` Phase 1 |
+| README, docs, COMMANDS | **`/sprint`** or **`/docs`** if user typed `/docs` | Docs via sprint or explicit command |
+| Code review, ruff cleanup | **`/sprint`** | Reviewer in sprint Phase 1 |
+| Requirements, backlog, PM planning | **`/ceo`** | PO/PM via CEO assigned work table |
+| Meeting logs, `/logsummary` | **`/ceo`** | CEO owns meeting system |
+| **Ambiguous implementation** (could touch backend + devops + security) | **`/sprint`** | Full dependency chain |
+| **Single secondary specialist**, user wants it done now | **`/sprint`** | Prefer sprint over guessing wrong direct route |
+
+**Default fallback:** **`/ceo`** for questions and planning; **`/sprint`** for "do the work" that isn't clearly Backend, Frontend, or QA.
+
+---
+
+## Step 2 — Activate
+
+**Before anything else:** output the **Routing Card** from `.cursor/rules/00-routing-display.mdc` (mandatory — tutors/customers must see intent + persona in chat).
+
+Then:
+
+1. **Read** command file + rule file for that route
+2. **If CEO or Sprint:** follow their workflow — they delegate to PO, PM, Arch, DevOps, Security, Docs, Review as needed; use **Handoff lines** when switching personas
+3. **Act** as that role until done; use their report format
+
+---
+
+## Step 3 — File-context boost (primary three only)
+
+| Open paths | Boost |
+|------------|-------|
+| `graph/**`, `api/**`, `services/**`, `prompts/**` | Backend |
+| `frontend/**` | Frontend |
+| `tests/**` | QA |
+| `team_logs/**`, `specs/**`, `.github/**`, `README.md` | CEO or Sprint (not direct to secondary) |
+
+Glob rules on specialist `.mdc` files still apply when those files are edited.
+
+---
+
+## Step 4 — Sub-agents (Task tool)
+
+Use sparingly for broad search or background shell — see CEO/sprint for when to delegate.
+
+---
+
+## `/route` command
+
+Read `.cursor/commands/route.md` — same 3 + CEO/Sprint logic.
+
+---
+
+## Router output
+
+Use the **Routing Card** format in `00-routing-display.mdc` (shown in chat). Optionally mirror internally:
+
+```
+TASK ROUTER
+Task: [summary]
+Route: [Backend | Frontend | QA | CEO | Sprint]
+Command: /[command]
+Reason: [one sentence]
+Delegated via CEO/Sprint: [PO | PM | Arch | DevOps | Security | Docs | Review | none]
+```
+
+---
+
+## Examples
+
+| User says | Route |
+|-----------|-------|
+| "Fix gap bridger JSON" | **Backend** · `/backend` |
+| "Add test for prompt config" | **QA** · `/qa` |
+| "StatusPanel double-click bug" | **Frontend** · `/frontend` |
+| "Are we production ready?" | **CEO** · `/ceo` |
+| "Fix CI and run security audit" | **Sprint** · `/sprint` |
+| "Update README for Ollama" | **Sprint** · `/sprint` (or `/ceo` to assign Docs) |
+| "Should we use Redis for sessions?" | **CEO** · `/ceo` (→ Architect) |
+| "Review architecture of LangGraph" | **CEO** · `/ceo` or **Sprint** if implementing |

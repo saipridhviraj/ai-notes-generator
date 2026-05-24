@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint + Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest pytest-asyncio pytest-cov httpx
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Run tests
+        env:
+          GROQ_API_KEY: dummy_key_for_ci
+          TAVILY_API_KEY: dummy_key_for_ci
+          APP_API_KEY: dummy_key_for_ci
+        run: |
+          pytest tests/ \
+            --tb=short \
+            --cov=. \
+            --cov-config=.coveragerc \
+            --cov-report=term-missing \
+            --cov-fail-under=80
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --target runtime -t ai-notes-generator:ci .
